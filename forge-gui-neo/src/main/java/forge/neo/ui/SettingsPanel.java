@@ -1328,6 +1328,9 @@ public class SettingsPanel extends VBox {
         getChildren().add(rivalsNote);
 
         tab(Tab.MODES);
+        // --- filtro global de expansiones ---
+        getChildren().add(section(NeoText.get("setfilter.section")));
+        getChildren().add(new SetFilterEditor());
         // --- las cartas prohibidas de cada formato (Discord, 26-10-2026) ---
         getChildren().add(section(NeoText.get("banlist.section")));
         getChildren().add(new BanListEditor());

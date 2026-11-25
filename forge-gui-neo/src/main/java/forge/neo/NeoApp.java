@@ -4560,6 +4560,7 @@ public class NeoApp extends Application implements SettingsPanel.Host {
                 new javafx.scene.layout.StackPane(previous, layer);
         settingsUnder = previous;
         settingsOverlay = root;
+        settingsFilterBefore = forge.neo.deck.SetFilter.current();
         scene.setRoot(root);
         applyScale();
     }
@@ -4577,12 +4578,24 @@ public class NeoApp extends Application implements SettingsPanel.Host {
     private void hideMenuSettings() {
         final javafx.scene.Parent under = settingsUnder;
         final javafx.scene.layout.StackPane holder = settingsOverlay;
+        final forge.neo.ascent.AscentPool filterBefore = settingsFilterBefore;
         settingsOverlay = null;
         settingsUnder = null;
+        settingsFilterBefore = null;
         if (under == null || holder == null) {
             return;
         }
         holder.getChildren().remove(under);
+        final boolean filterChanged = filterBefore != null
+                && !filterBefore.equals(forge.neo.deck.SetFilter.current());
+        if (filterChanged && under == home && lastFormat != null) {
+            showHome(lastFormat);
+            return;
+        }
+        if (filterChanged && under instanceof forge.neo.ui.CardLibraryScreen) {
+            showLibrary();
+            return;
+        }
         scene.setRoot(under);
         applyScale();
         // Y que se vuelva a maquetar de cero.
@@ -4598,6 +4611,7 @@ public class NeoApp extends Application implements SettingsPanel.Host {
 
     private javafx.scene.layout.StackPane settingsOverlay;
     private javafx.scene.Parent settingsUnder;
+    private forge.neo.ascent.AscentPool settingsFilterBefore;
 
 
     // ---------------------------------------------------------------

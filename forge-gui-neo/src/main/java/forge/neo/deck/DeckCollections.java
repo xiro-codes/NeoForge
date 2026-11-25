@@ -122,6 +122,9 @@ public final class DeckCollections {
         if (s != null) {
             s.forEach(out::add);
         }
+        if (SetFilter.isActive()) {
+            out.removeIf(d -> !SetFilter.allows(d));
+        }
         return out;
     }
 

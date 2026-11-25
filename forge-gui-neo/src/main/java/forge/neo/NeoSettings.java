@@ -53,6 +53,8 @@ public final class NeoSettings {
     public static final String MUSIC_VOLUME = "musicVolume";
     /** Tamano del cuadro (4 u 8 participantes) del proximo torneo (la auditoría del motor, apartado C6). */
     public static final String TOURNAMENT_SIZE = "tournamentSize";
+    /** Filtro global de expansiones ("", "range:LEA:4ED", "set:ZEN,WWK"). Ver {@link forge.neo.deck.SetFilter}. */
+    public static final String SET_FILTER = "setFilter";
 
     /**
      * Con que volumen se abre el juego la primera vez.

@@ -183,6 +183,9 @@ public final class NetDecks {
                 System.err.println("[neo] mazos de internet: se salta " + c.getName() + ": " + e);
             }
         }
+        if (SetFilter.isActive()) {
+            out.removeIf(d -> !SetFilter.allows(d));
+        }
         return out;
     }
 

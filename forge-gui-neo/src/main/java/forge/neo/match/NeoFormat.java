@@ -339,6 +339,9 @@ public enum NeoFormat implements forge.neo.deck.DeckContext {
         if (pool != null) {
             out.removeIf(d -> d == null || !pool.isDeckLegal(d));
         }
+        if (this != DRAFT && this != SELLADO && forge.neo.deck.SetFilter.isActive()) {
+            out.removeIf(d -> !forge.neo.deck.SetFilter.allows(d));
+        }
         return out;
     }
 

@@ -268,12 +268,78 @@ public final class LibraryCheck {
                         "shrine of burning rage", "artifact"));
 
         artPolicy();
+        setFilter();
 
         System.out.println();
         System.out.printf("  %d comprobaciones OK, %d fallos%n", passed, failed);
         if (failed > 0) {
             System.out.println("  *** HAY FALLOS ***");
         }
+    }
+
+    /**
+     * El filtro global de expansiones de Ajustes ({@link SetFilter}): cuando está
+     * puesto, la enciclopedia, el buscador del editor y las listas de mazos solo
+     * enseñan cartas y mazos de esas expansiones.
+     */
+    private static void setFilter() {
+        final forge.neo.ascent.AscentPool saved = SetFilter.current();
+        try {
+            final int allCount = CardLibrary.get().size();
+            final int standardDecksAll = forge.neo.match.NeoFormat.ESTANDAR.decks().size();
+
+            SetFilter.set(forge.neo.ascent.AscentPool.parse("set:LEA"));
+            check("filtro de expansiones: activo con LEA",
+                    SetFilter.isActive() && SetFilter.allowsEdition("LEA") && !SetFilter.allowsEdition("ZEN"));
+
+            final CardLibrary leaLib = CardLibrary.get();
+            final List<PaperCard> leaCards = leaLib.find(new CardLibrary.Query());
+            boolean onlyLea = !leaCards.isEmpty() && leaCards.size() < allCount;
+            for (final PaperCard c : leaCards) {
+                final boolean basic = c.getRules() != null && c.getRules().getType().isBasicLand();
+                onlyLea &= "LEA".equals(c.getEdition()) || basic;
+            }
+            check("filtro de expansiones: la enciclopedia solo enseña cartas de LEA (" + leaCards.size() + ")",
+                    onlyLea && leaLib.editions().size() == 1);
+
+            final CardIndex idx = CardIndex.get();
+            boolean indexOnlyLea = idx.size() > 0 && idx.size() < allCount;
+            for (int i = 0; i < idx.size(); i++) {
+                final PaperCard c = idx.cardAt(i);
+                final boolean basic = c.getRules() != null && c.getRules().getType().isBasicLand();
+                indexOnlyLea &= SetFilter.allows(c) && ("LEA".equals(c.getEdition()) || basic);
+            }
+            check("filtro de expansiones: el catálogo del editor solo enseña cartas de LEA (" + idx.size() + ")",
+                    indexOnlyLea);
+
+            final forge.deck.Deck allowedDeck = new forge.deck.Deck("lea-ok");
+            final PaperCard bolt = FModel.getMagicDb().getCommonCards().getCard("Lightning Bolt");
+            final PaperCard mountain = FModel.getMagicDb().getCommonCards().getCard("Mountain");
+            final PaperCard jace = FModel.getMagicDb().getCommonCards().getCard("Jace, the Mind Sculptor");
+            if (bolt != null && mountain != null) {
+                allowedDeck.getMain().add(bolt, 4);
+                allowedDeck.getMain().add(mountain, 20);
+            }
+            final forge.deck.Deck blockedDeck = new forge.deck.Deck("lea-no");
+            if (jace != null && mountain != null) {
+                blockedDeck.getMain().add(jace, 1);
+                blockedDeck.getMain().add(mountain, 20);
+            }
+            check("filtro de expansiones: acepta un mazo con cartas de LEA + tierras básicas y rechaza uno con cartas de fuera",
+                    SetFilter.allows(allowedDeck) && !SetFilter.allows(blockedDeck));
+
+            final List<forge.deck.Deck> filteredDecks = forge.neo.match.NeoFormat.ESTANDAR.decks();
+            boolean allDecksAllowed = filteredDecks.size() < standardDecksAll;
+            for (final forge.deck.Deck d : filteredDecks) {
+                allDecksAllowed &= SetFilter.allows(d);
+            }
+            check("filtro de expansiones: la lista de mazos filtra los que llevan cartas de fuera ("
+                    + filteredDecks.size() + " de " + standardDecksAll + ")", allDecksAllowed);
+        } finally {
+            SetFilter.set(saved);
+        }
+        check("filtro de expansiones: al quitarlo vuelve todo el catálogo",
+                !SetFilter.isActive() && CardLibrary.get().size() > 20000);
     }
 
     /**

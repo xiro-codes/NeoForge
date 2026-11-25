@@ -119,10 +119,16 @@ final class CardIndex {
             // sin ellas no se podia montar su mazo aparte (Discord, 07-11-2026,
             // Myra the Magnificent). Los planos y los esquemas no: no van en un
             // mazo que se monte aqui.
-            final List<PaperCard> all = new ArrayList<>(FModel.getMagicDb().getCommonCards().getUniqueCards());
+            final boolean filtered = SetFilter.isActive();
+            final List<PaperCard> all = new ArrayList<>();
+            for (final PaperCard c : FModel.getMagicDb().getCommonCards().getUniqueCards()) {
+                if (!filtered || SetFilter.allows(c)) {
+                    all.add(filtered ? SetFilter.printing(c) : c);
+                }
+            }
             for (final PaperCard c : FModel.getMagicDb().getVariantCards().getUniqueCards()) {
-                if (DeckEditor.extraSectionOf(c) != null) {
-                    all.add(c);
+                if (DeckEditor.extraSectionOf(c) != null && (!filtered || SetFilter.allows(c))) {
+                    all.add(filtered ? SetFilter.printing(c) : c);
                 }
             }
             instance = new CardIndex(all);

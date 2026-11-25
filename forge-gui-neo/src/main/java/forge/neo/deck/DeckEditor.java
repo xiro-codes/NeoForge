@@ -326,10 +326,11 @@ public final class DeckEditor {
      * portada de una reimpresion rara.
      */
     private static List<PaperCard> poolCards(final GameFormat pool) {
+        final boolean filtered = SetFilter.isActive();
         final List<PaperCard> out = new ArrayList<>();
         for (final PaperCard card : FModel.getMagicDb().getCommonCards().getUniqueCards()) {
-            if (pool.getFilterRules().test(card)) {
-                out.add(card);
+            if (pool.getFilterRules().test(card) && (!filtered || SetFilter.allows(card))) {
+                out.add(filtered ? SetFilter.printing(card) : card);
             }
         }
         return out;
@@ -1382,6 +1383,9 @@ public final class DeckEditor {
      * que no, la Aventura: ver {@link DeckContext#enforcesCardPool()}.
      */
     private boolean inCardPool(final PaperCard card) {
+        if (!format.isLimited() && !SetFilter.allows(card)) {
+            return false;
+        }
         return !format.enforcesCardPool() || deckFormat().isLegalCard(card);
     }
 
@@ -2935,6 +2939,9 @@ public final class DeckEditor {
         }
         final List<PaperCard> all =
                 new ArrayList<>(FModel.getMagicDb().getCommonCards().getAllCards(card));
+        if (SetFilter.isActive()) {
+            all.removeIf(p -> !SetFilter.allowsEdition(p.getEdition()));
+        }
         all.sort(Comparator.comparing(PaperCard::getEdition)
                 .thenComparing(PaperCard::getCollectorNumber));
         return all;

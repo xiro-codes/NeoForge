@@ -123,8 +123,9 @@ public final class GeneratedDecks {
                 : forge.card.CardRulesPredicates.IS_KEPT_IN_RANDOM_DECKS;
         final List<PaperCard> legal = new ArrayList<>();
         for (final PaperCard c : FModel.getMagicDb().getCommonCards().getUniqueCards()) {
-            if (format.isLegalCard(c) && format.isLegalCommander(c.getRules()) && canPlay.test(c.getRules())) {
-                legal.add(c);
+            if (format.isLegalCard(c) && format.isLegalCommander(c.getRules()) && canPlay.test(c.getRules())
+                    && SetFilter.allows(c)) {
+                legal.add(SetFilter.printing(c));
             }
         }
         if (legal.isEmpty()) {
@@ -191,6 +192,7 @@ public final class GeneratedDecks {
         }
         final Predicate<PaperCard> fits = c -> format.isLegalCard(c) && colours.test(c.getRules())
                 && !c.getRules().getType().isBasicLand() && !notForDecks(c)
+                && SetFilter.allows(c)
                 && (!forAi || DeckGeneratorBase.AI_CAN_PLAY.test(c.getRules()))
                 && !taken.contains(normalized(c.getName()));
 
@@ -255,7 +257,7 @@ public final class GeneratedDecks {
      * admiten van por {@link #forCommandZone}.
      */
     public static Deck forCommander(final PaperCard commander, final DeckFormat format, final boolean forAi) {
-        if (AscentSynergy.knows(commander)) {
+        if (!SetFilter.isActive() && AscentSynergy.knows(commander)) {
             try {
                 return DeckgenUtil.generateRandomCommanderDeck(commander, format, forAi, true);
             } catch (final RuntimeException e) {
@@ -263,7 +265,13 @@ public final class GeneratedDecks {
             }
         }
         final Deck t = themed(commander, null, format, new CardPool(), forAi);
-        return t != null ? t : DeckgenUtil.generateRandomCommanderDeck(commander, format, forAi, false);
+        if (t != null) {
+            return t;
+        }
+        final Deck raw = DeckgenUtil.generateRandomCommanderDeck(commander, format, forAi, false);
+        return SetFilter.isActive() && raw != null
+                ? SetFilter.current().restrict(raw, forge.neo.ascent.AscentRun.Mode.COMMANDER, MyRandom.getRandom())
+                : raw;
     }
 
     /**
@@ -355,8 +363,8 @@ public final class GeneratedDecks {
         }
         final List<PaperCard> candidates = new ArrayList<>();
         for (final PaperCard c : weightedOrder(new ArrayList<>(together.values()))) {
-            if (format.isLegalCard(c) && !taken.contains(normalized(c.getName()))) {
-                candidates.add(c);
+            if (format.isLegalCard(c) && SetFilter.allows(c) && !taken.contains(normalized(c.getName()))) {
+                candidates.add(SetFilter.printing(c));
             }
         }
         final List<PaperCard> pool = limitToBracket(candidates, commander, partner, maxBracket);

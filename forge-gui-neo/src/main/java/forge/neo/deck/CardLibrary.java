@@ -110,7 +110,7 @@ public final class CardLibrary {
             final String name = key(p);
             // Lo que el indice no tiene (las reliquias de Ascenso) tampoco
             // existe aqui: por la puerta de las expansiones se colarian.
-            if (!known.contains(name)) {
+            if (!known.contains(name) || !SetFilter.allowsEdition(p.getEdition())) {
                 continue;
             }
             final CardEdition ed = all.get(p.getEdition());
@@ -226,6 +226,9 @@ public final class CardLibrary {
         final CardEdition.Collection all = FModel.getMagicDb().getEditions();
         final List<PaperCard> out =
                 new ArrayList<>(FModel.getMagicDb().getCommonCards().getAllCards(card.getName()));
+        if (SetFilter.isActive()) {
+            out.removeIf(p -> !SetFilter.allowsEdition(p.getEdition()));
+        }
         out.sort(Comparator.comparing((PaperCard p) -> {
             final CardEdition ed = all.get(p.getEdition());
             return ed == null ? new Date(0) : dateOf(ed);
