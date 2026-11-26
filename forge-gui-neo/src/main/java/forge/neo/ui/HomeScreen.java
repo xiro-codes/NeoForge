@@ -351,11 +351,13 @@ et}) y no se tocan.
 
     private final Label summary = new Label();
     private final Button play = new Button(NeoText.get("home.play"));
+    private final Button view = new Button(NeoText.get("home.view"));
     private final Button edit = new Button(NeoText.get("home.edit"));
 
     private final forge.neo.match.NeoFormat format;
     private final Runnable onBack;
     private final EditHandler onEdit;
+    private EditHandler onView;
     private final Runnable onDownload;
 
     public HomeScreen(final forge.neo.match.NeoFormat format, final List<Deck> decks,
@@ -629,6 +631,14 @@ et}) y no se tocan.
         unshrinkable(newDeck).getStyleClass().add("btn-secondary");
         newDeck.setOnAction(e -> onEdit.edit(null, contextFor(null)));
 
+        unshrinkable(view).getStyleClass().add("btn-secondary");
+        view.setId("home-view");
+        view.setOnAction(e -> {
+            if (selected != null) {
+                viewDeck(selected);
+            }
+        });
+
         unshrinkable(edit).getStyleClass().add("btn-secondary");
         edit.setOnAction(e -> {
             if (selected != null) {
@@ -650,7 +660,7 @@ et}) y no se tocan.
         importDeck.setId("home-import");
         importDeck.setOnAction(e -> importDeck());
 
-        final HBox tools = new HBox(8, newDeck, importDeck, edit, updateLink);
+        final HBox tools = new HBox(8, newDeck, importDeck, view, edit, updateLink);
         tools.setAlignment(Pos.CENTER_RIGHT);
 
         // Bajar mazos hechos. Solo para los formatos de los que Forge mantiene
@@ -1903,9 +1913,28 @@ et}) y no se tocan.
      * El menu de "Mas..." de una baldosa: Renombrar, Duplicar y Notas. Lo que
      * no aplica a ese mazo no sale (un preconstruido de Forge solo se duplica).
      */
+    public void setOnView(final EditHandler onView) {
+        this.onView = onView;
+    }
+
+    private void viewDeck(final Deck deck) {
+        if (deck == null) {
+            return;
+        }
+        if (onView != null) {
+            onView.edit(deck, contextFor(deck));
+        } else {
+            onEdit.edit(deck, contextFor(deck));
+        }
+    }
+
     private void showMoreMenu(final Deck deck, final javafx.scene.Node anchor) {
         final javafx.scene.control.ContextMenu menu = new javafx.scene.control.ContextMenu();
         menu.getStyleClass().add("card-menu");
+        final javafx.scene.control.MenuItem viewItem = new javafx.scene.control.MenuItem(
+                NeoText.get("deck.viewDeck"));
+        viewItem.setOnAction(e -> viewDeck(deck));
+        menu.getItems().add(viewItem);
         if (canRename(deck)) {
             final javafx.scene.control.MenuItem rename = new javafx.scene.control.MenuItem(
                     NeoText.get("deck.rename") + "\u2026");
@@ -3198,6 +3227,7 @@ et}) y no se tocan.
                 markRandom();
             }
         }
+        view.setDisable(deck == null);
         edit.setDisable(deck == null);
         refreshUpdateLink();
         refreshCommander();

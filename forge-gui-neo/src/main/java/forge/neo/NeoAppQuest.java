@@ -178,6 +178,11 @@ final class NeoAppQuest {
             }
 
             @Override
+            public void viewDeck() {
+                showQuestDeckBuilder(forge.neo.quest.NeoQuest.currentDeck(), true);
+            }
+
+            @Override
             public void editDeck() {
                 showQuestDeckBuilder(forge.neo.quest.NeoQuest.currentDeck());
             }
@@ -822,6 +827,10 @@ final class NeoAppQuest {
      * COPIA, para que salir sin guardar sea de verdad no tocar nada.
      */
     void showQuestDeckBuilder(final Deck deck) {
+        showQuestDeckBuilder(deck, false);
+    }
+
+    void showQuestDeckBuilder(final Deck deck, final boolean readOnly) {
         if (!forge.neo.quest.NeoQuest.isActive()) {
             showQuest();
             return;
@@ -848,7 +857,7 @@ final class NeoAppQuest {
             }
             forge.neo.quest.NeoQuest.save();
             showQuestHome();
-        });
+        }, readOnly && deck != null);
         app.scene.setRoot(app.builder);
         app.applyScale();
     }

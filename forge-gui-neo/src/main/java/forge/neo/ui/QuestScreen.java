@@ -59,6 +59,11 @@ public class QuestScreen extends StackPane {
 
         void collection();
 
+        /** Ver el mazo con el que juegas ahora, en solo lectura. */
+        default void viewDeck() {
+            editDeck();
+        }
+
         /** Editar el mazo con el que juegas ahora. */
         void editDeck();
 
@@ -430,6 +435,13 @@ public class QuestScreen extends StackPane {
         // Editar y crear, aqui mismo. El mazo de la aventura se toca MUCHO —
         // cada sobre que abres es un motivo para volver — asi que mandar a otra
         // pantalla a buscarlo seria el camino largo de la cosa mas frecuente.
+        final Button view = new Button(NeoText.get("home.view"));
+        view.setId("quest-view-deck");
+        view.getStyleClass().add("btn-secondary");
+        view.setMinWidth(Region.USE_PREF_SIZE);
+        view.setDisable(deck == null);
+        view.setOnAction(e -> actions.viewDeck());
+
         final Button edit = new Button(NeoText.get("quest.editDeck"));
         edit.getStyleClass().add("btn-secondary");
         edit.setMinWidth(Region.USE_PREF_SIZE);
@@ -496,7 +508,7 @@ public class QuestScreen extends StackPane {
 
         final VBox texts = new VBox(2, caption, name, state);
         final HBox row = new HBox(10, strip(deck), texts, gap,
-                edit, create, change, collection, shop, bazaar, tournaments);
+                view, edit, create, change, collection, shop, bazaar, tournaments);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("stat-tile");
         row.setPadding(new Insets(12, 18, 12, 18));

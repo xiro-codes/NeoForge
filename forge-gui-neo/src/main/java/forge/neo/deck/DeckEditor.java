@@ -3753,6 +3753,17 @@ public final class DeckEditor {
         return base + " (" + n + ")";
     }
 
+    /**
+     * Desliga este mazo del original guardado y le da un nombre libre de copia
+     * ({@link #copyName()}) sin guardarlo todavia: para saltar de la vista de
+     * solo lectura a editar una copia nueva sin tocar el original.
+     */
+    public void detachAsCopy() {
+        deck.setName(copyName());
+        savedAs = null;
+        dirty = true;
+    }
+
     /** Con que nombre esta guardado, o null si todavia no lo esta. */
     public String getSavedAs() {
         return savedAs;

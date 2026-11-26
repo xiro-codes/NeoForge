@@ -1539,7 +1539,21 @@ public final class DeckRulesCheck {
                 format.storage().get(base).getMain().countByName("Goblin Guide") == 0);
         check("Copia: con el nombre de otro mazo no se guarda", !open.saveAsCopy(base));
 
-        for (final String n : new String[] {base, second}) {
+        // Y desde la vista de solo lectura ("Editar una copia"): se desliga del
+        // original sin guardarlo todavia, y al guardar crea el nuevo sin tocar el viejo.
+        final DeckEditor viewer = DeckEditor.copyOf(format, format.storage().get(base));
+        final String third = base + " (3)";
+        viewer.detachAsCopy();
+        check("Vista -> Editar una copia: toma el siguiente nombre libre y queda por guardar",
+                third.equals(viewer.getName()) && viewer.getSavedAs() == null && viewer.isDirty());
+        viewer.add(card("Goblin Guide"), 1);
+        viewer.save();
+        check("Vista -> Editar una copia: al guardar crea la copia nueva y respeta el original",
+                format.storage().contains(third)
+                        && format.storage().get(third).getMain().countByName("Goblin Guide") == 1
+                        && format.storage().get(base).getMain().countByName("Goblin Guide") == 0);
+
+        for (final String n : new String[] {base, second, third}) {
             if (format.storage().contains(n)) {
                 format.storage().delete(n);
             }

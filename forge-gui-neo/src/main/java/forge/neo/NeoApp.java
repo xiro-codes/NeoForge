@@ -1588,7 +1588,12 @@ public class NeoApp extends Application implements SettingsPanel.Host {
                     }
                 }
             }
-            showDeckBuilder(target);
+            final boolean readOnly = args.contains("--view") || args.contains("--view-deck");
+            if (readOnly && target != null) {
+                showDeckViewer(target, lastFormat);
+            } else {
+                showDeckBuilder(target);
+            }
             if (args.contains("--visual") && builder != null) {
                 builder.showVisualView();
             }
@@ -4830,6 +4835,7 @@ public class NeoApp extends Application implements SettingsPanel.Host {
         home = new HomeScreen(format, format.decks(), cardWidth * 1.7,
                 this::startFromHome, this::showMainMenu, this::showDeckBuilder,
                 () -> showNetDecks(format));
+        home.setOnView(this::showDeckViewer);
         // Un mazo importado desde el selector que no se puede guardar tal cual
         // (cartas que no valen): al constructor, con la lista dentro y sin guardar.
         home.setOnEditImported(editor -> {
@@ -4915,6 +4921,15 @@ public class NeoApp extends Application implements SettingsPanel.Host {
      * una — o si se crea con esa pestanya abierta.
      */
     private void showDeckBuilder(final Deck deck, final forge.neo.deck.DeckContext where) {
+        showDeckBuilder(deck, where, false);
+    }
+
+    private void showDeckViewer(final Deck deck, final forge.neo.deck.DeckContext where) {
+        showDeckBuilder(deck, where, deck != null);
+    }
+
+    private void showDeckBuilder(final Deck deck, final forge.neo.deck.DeckContext where,
+                                 final boolean readOnly) {
         final NeoFormat format = lastFormat;
         final forge.neo.deck.DeckEditor editor = deck == null
                 ? forge.neo.deck.DeckEditor.createNew(where, nextDeckName(where))
@@ -4923,7 +4938,7 @@ public class NeoApp extends Application implements SettingsPanel.Host {
         builder = new DeckBuilderScreen(editor, cardWidth, () -> {
             builder = null;
             showHome(format);
-        });
+        }, readOnly && deck != null);
         // Un mazo NUEVO de Commander, Brawl u Oathbreaker empieza eligiendo
         // comandante, con el catalogo de comandantes ya puesto. Solo esos tres
         // formatos, a proposito: pedido asi el 15-09-2026, y Oathbreaker se

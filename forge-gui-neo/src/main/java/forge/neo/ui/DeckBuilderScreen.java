@@ -107,7 +107,14 @@ public class DeckBuilderScreen extends StackPane {
     private Region editView;
     private DeckStackView stackView;
     private boolean visualMode;
+    private boolean readOnly;
     private Button visualButton;
+    private final Button renameButton = new Button(NeoText.get("deck.rename"));
+    private final Button copyButton = new Button(NeoText.get("deck.copy"));
+    private final Button editSegmentButton = new Button(NeoText.get("deck.build"));
+    private final Button saveButton = new Button(NeoText.get("common.save"));
+    private final Button editDeckButton = new Button(NeoText.get("deck.view.edit"));
+    private final Button editCopyButton = new Button(NeoText.get("deck.view.editCopy"));
     /**
      * La funda de ESTE mazo.
      *
@@ -266,9 +273,15 @@ public class DeckBuilderScreen extends StackPane {
 
     public DeckBuilderScreen(final DeckEditor editor, final double cardWidth,
                              final Runnable onBack) {
+        this(editor, cardWidth, onBack, Boolean.getBoolean("neo.builder.readOnly"));
+    }
+
+    public DeckBuilderScreen(final DeckEditor editor, final double cardWidth,
+                             final Runnable onBack, final boolean readOnly) {
         this.editor = editor;
         this.cardWidth = Math.max(144, cardWidth * 1.3);
         this.onBack = onBack;
+        this.readOnly = readOnly;
         // "Solo lo que cabe" encendido o no de salida lo decide el contexto
         // (apagado en la Aventura, pedido jugando el 19-09-2026).
         this.onlyLegal = editor.onlyFitsByDefault();
@@ -297,6 +310,10 @@ public class DeckBuilderScreen extends StackPane {
 
         refreshCatalogue();
         refreshDeck();
+        if (readOnly) {
+            applyReadOnlyState();
+            setVisualMode(true);
+        }
     }
 
     // ===============================================================
@@ -307,7 +324,7 @@ public class DeckBuilderScreen extends StackPane {
         title.setMinWidth(0);
         title.setMaxWidth(Double.MAX_VALUE);
 
-        final Button rename = new Button(NeoText.get("deck.rename"));
+        final Button rename = renameButton;
         rename.getStyleClass().add("btn-secondary");
         rename.setOnAction(e -> askName());
         // El mazo de un draft o un sellado no se renombra: su nombre es tambien
@@ -317,7 +334,7 @@ public class DeckBuilderScreen extends StackPane {
         rename.setManaged(renameable);
         // GUARDAR UNA COPIA (Discord, 08-10-2026): el mazo tal cual, artes y
         // foil incluidos, con otro nombre. Ver DeckEditor.saveAsCopy.
-        final Button copy = new Button(NeoText.get("deck.copy"));
+        final Button copy = copyButton;
         copy.getStyleClass().add("btn-secondary");
         copy.setMinWidth(Region.USE_PREF_SIZE);
         copy.setOnAction(e -> askCopyName());
@@ -355,16 +372,21 @@ public class DeckBuilderScreen extends StackPane {
         final Region gap = new Region();
         HBox.setHgrow(gap, Priority.ALWAYS);
 
-        final Button edit = new Button(NeoText.get("deck.build"));
+        final Button edit = editSegmentButton;
         visualButton = new Button(NeoText.get("deck.visual"));
         final Button visual = visualButton;
         edit.getStyleClass().add("segment");
         visual.getStyleClass().add("segment");
-        edit.pseudoClassStateChanged(SELECTED, true);
+        edit.pseudoClassStateChanged(SELECTED, !readOnly);
+        visual.pseudoClassStateChanged(SELECTED, readOnly);
         edit.setOnAction(e -> {
-            setVisualMode(false);
-            edit.pseudoClassStateChanged(SELECTED, true);
-            visual.pseudoClassStateChanged(SELECTED, false);
+            if (readOnly) {
+                startEditing();
+            } else {
+                setVisualMode(false);
+                edit.pseudoClassStateChanged(SELECTED, true);
+                visual.pseudoClassStateChanged(SELECTED, false);
+            }
         });
         visual.setOnAction(e -> {
             setVisualMode(true);
@@ -1985,9 +2007,21 @@ public class DeckBuilderScreen extends StackPane {
         clearSide.setVisible(false);
         clearSide.setManaged(false);
 
-        final Button save = new Button(NeoText.get("common.save"));
+        final Button save = saveButton;
         save.getStyleClass().add("btn-primary");
         save.setOnAction(e -> save());
+
+        editDeckButton.getStyleClass().add("btn-primary");
+        editDeckButton.setId("builder-edit");
+        editDeckButton.setOnAction(e -> startEditing());
+        editDeckButton.setVisible(false);
+        editDeckButton.setManaged(false);
+
+        editCopyButton.getStyleClass().add("btn-secondary");
+        editCopyButton.setId("builder-edit-copy");
+        editCopyButton.setOnAction(e -> startEditingCopy());
+        editCopyButton.setVisible(false);
+        editCopyButton.setManaged(false);
 
         final Region gap = new Region();
         HBox.setHgrow(gap, Priority.ALWAYS);
@@ -1995,13 +2029,13 @@ public class DeckBuilderScreen extends StackPane {
         // Ningun boton se encoge por debajo de su texto: cuando la fila no cabe,
         // JavaFX lo corta con puntos suspensivos y queda un pie ilegible.
         for (final Button b : new Button[] {back, cleanup, removeMissing, exportMissing, clearSide, commander, spellButton, generate,
-                complete, autoBuild, clearMain, importer, updateFromUrl, export, save}) {
+                complete, autoBuild, clearMain, importer, updateFromUrl, export, editCopyButton, save, editDeckButton}) {
             b.setMinWidth(Region.USE_PREF_SIZE);
         }
 
         final FlowPane actions =
                 new FlowPane(8, 8, cleanup, removeMissing, exportMissing, clearSide, commander, spellButton, generate, complete, autoBuild,
-                        clearMain, importer, updateFromUrl, export);
+                        clearMain, importer, updateFromUrl, export, editCopyButton);
         actions.setAlignment(Pos.CENTER_RIGHT);
         actions.setMinWidth(0);
         HBox.setHgrow(actions, Priority.ALWAYS);
@@ -2009,7 +2043,7 @@ public class DeckBuilderScreen extends StackPane {
         back.setId("builder-back");
         // Volver, abajo a la derecha y junto a la accion principal: el mismo
         // sitio en todas las pantallas (las notas de diseño, principio 12).
-        final HBox row = new HBox(14, actions, back, save);
+        final HBox row = new HBox(14, actions, back, save, editDeckButton);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("home-footer");
         row.setPadding(new Insets(14, 26, 18, 26));
@@ -2532,7 +2566,9 @@ public class DeckBuilderScreen extends StackPane {
             public void menu(final PaperCard card, final Region anchor,
                              final double screenX, final double screenY,
                              final boolean isCommander) {
-                if (isCommander) {
+                if (readOnly) {
+                    readOnlyCardMenu(card);
+                } else if (isCommander) {
                     commanderMenu(card, anchor, screenX, screenY);
                 } else {
                     cardMenu(card, anchor, screenX, screenY);
@@ -2541,7 +2577,7 @@ public class DeckBuilderScreen extends StackPane {
 
             @Override
             public boolean canEdit() {
-                return true;
+                return !readOnly;
             }
 
             @Override
@@ -2577,6 +2613,100 @@ public class DeckBuilderScreen extends StackPane {
             layout.setCenter(editView);
             refreshCatalogue();
         }
+    }
+
+    /** Si la pantalla se ha abierto solo para ver el mazo, sin tocarlo. */
+    public boolean isReadOnly() {
+        return readOnly;
+    }
+
+    /** Sale del modo de solo lectura y pasa a editar este mismo mazo. */
+    public void startEditing() {
+        if (!readOnly) {
+            setVisualMode(false);
+            editSegmentButton.pseudoClassStateChanged(SELECTED, true);
+            if (visualButton != null) {
+                visualButton.pseudoClassStateChanged(SELECTED, false);
+            }
+            return;
+        }
+        readOnly = false;
+        applyReadOnlyState();
+        if (stackView != null) {
+            stackView.refresh();
+        }
+        setVisualMode(false);
+        editSegmentButton.pseudoClassStateChanged(SELECTED, true);
+        if (visualButton != null) {
+            visualButton.pseudoClassStateChanged(SELECTED, false);
+        }
+    }
+
+    /** Sale del modo de solo lectura editando una copia nueva del mazo. */
+    public void startEditingCopy() {
+        if (editor.getFormat().canCopy()) {
+            editor.detachAsCopy();
+        }
+        startEditing();
+    }
+
+    private void applyReadOnlyState() {
+        final boolean editing = !readOnly;
+        final boolean renameable = editing && editor.getFormat().canRename();
+        final boolean copyable = editing && editor.getFormat().canCopy();
+        renameButton.setVisible(renameable);
+        renameButton.setManaged(renameable);
+        copyButton.setVisible(copyable);
+        copyButton.setManaged(copyable);
+        notesButton.setVisible(renameable);
+        notesButton.setManaged(renameable);
+        foilAllButton.setVisible(editing);
+        foilAllButton.setManaged(editing);
+        sleeveButton.setVisible(editing);
+        sleeveButton.setManaged(editing);
+        final boolean houseRules = editing && editor.getFormat().allowsHouseRules();
+        houseRulesButton.setVisible(houseRules);
+        houseRulesButton.setManaged(houseRules);
+
+        final boolean withCommander = editing && editor.usesCommander();
+        commanderButton.setVisible(withCommander);
+        commanderButton.setManaged(withCommander);
+        final boolean withSpell = editing && editor.usesSignatureSpell();
+        spellButton.setVisible(withSpell);
+        spellButton.setManaged(withSpell);
+
+        final boolean limitedPool = editing && editor.canAutoBuild();
+        autoBuild.setVisible(limitedPool);
+        autoBuild.setManaged(limitedPool);
+        clearMain.setVisible(limitedPool);
+        clearMain.setManaged(limitedPool);
+
+        importer.setVisible(editing);
+        importer.setManaged(editing);
+        saveButton.setVisible(editing);
+        saveButton.setManaged(editing);
+
+        editDeckButton.setVisible(readOnly);
+        editDeckButton.setManaged(readOnly);
+        final boolean canEditCopy = readOnly && editor.getFormat().canCopy();
+        editCopyButton.setVisible(canEditCopy);
+        editCopyButton.setManaged(canEditCopy);
+
+        refreshUpdateFromUrl();
+        refreshDeck();
+    }
+
+    /** Menu de una carta cuando el mazo se esta viendo en solo lectura. */
+    private void readOnlyCardMenu(final PaperCard card) {
+        final boolean canCopy = editor.getFormat().canCopy();
+        showCardMenu(card, CardActionMenu.actions(
+                new CardActionMenu.Action(NeoText.get("deck.viewCard"), null, true,
+                        () -> zoom(card)),
+                new CardActionMenu.Action(NeoText.get("deck.view.edit"), null, true,
+                        this::startEditing),
+                canCopy ? new CardActionMenu.Action(NeoText.get("deck.view.editCopy"),
+                        NeoText.get("deck.view.editCopy.detail", editor.copyName()), true,
+                        this::startEditingCopy) : null));
     }
 
     /**
@@ -2639,15 +2769,16 @@ public class DeckBuilderScreen extends StackPane {
         for (final PaperCard c : editor.illegalCards()) {
             illegal.add(c.getName());
         }
-        cleanup.setVisible(!illegal.isEmpty());
-        cleanup.setManaged(!illegal.isEmpty());
+        final boolean showCleanup = !readOnly && !illegal.isEmpty();
+        cleanup.setVisible(showCleanup);
+        cleanup.setManaged(showCleanup);
         // Solo cuando el mazo lleva cartas que no tienes (la Quest).
         final boolean lacking = editor.missingTotal() > 0;
-        removeMissing.setVisible(lacking);
-        removeMissing.setManaged(lacking);
+        removeMissing.setVisible(!readOnly && lacking);
+        removeMissing.setManaged(!readOnly && lacking);
         exportMissing.setVisible(lacking);
         exportMissing.setManaged(lacking);
-        final boolean sideTooBig = editor.sideboardOverflow() > 0;
+        final boolean sideTooBig = !readOnly && editor.sideboardOverflow() > 0;
         clearSide.setText(NeoText.get("deck.clearSideboard", editor.sideboardWithoutCompanion()));
         clearSide.setVisible(sideTooBig);
         clearSide.setManaged(sideTooBig);
@@ -3466,12 +3597,12 @@ public class DeckBuilderScreen extends StackPane {
         // sale de ningun sitio.
         // Y nunca en limitado (Commander Draft): genera con TODAS las cartas,
         // y ahi el mazo se monta con lo draftado.
-        final boolean canGenerate = editor.usesCommander() && editor.mainCommander() != null
+        final boolean canGenerate = !readOnly && editor.usesCommander() && editor.mainCommander() != null
                 && !editor.getFormat().poolInSideboard();
         generate.setVisible(canGenerate);
         generate.setManaged(canGenerate);
         // Y "Completar", con la misma fuente que "Generar" o "Montar solo".
-        final boolean canComplete = editor.canComplete();
+        final boolean canComplete = !readOnly && editor.canComplete();
         complete.setVisible(canComplete);
         complete.setManaged(canComplete);
         if (cmd.isEmpty()) {
@@ -3878,7 +4009,7 @@ public class DeckBuilderScreen extends StackPane {
 
     /** El boton solo se ve en un mazo que sabe de donde vino. */
     private void refreshUpdateFromUrl() {
-        final boolean on = editor.source() != null && !editor.getFormat().poolInSideboard();
+        final boolean on = !readOnly && editor.source() != null && !editor.getFormat().poolInSideboard();
         updateFromUrl.setVisible(on);
         updateFromUrl.setManaged(on);
     }
